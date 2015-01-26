@@ -1,0 +1,312 @@
+
+public class Node {
+	private String str;
+	private double number;
+	private enum types {VARIABLE, NUMBER, OPERATOR}
+	private types type;
+	private Node left, right;
+	
+	public Node(double d) {
+		number = d;
+		type = types.NUMBER;
+	}
+	
+	public Node(String k) {
+		str = k;
+		type = types.VARIABLE;
+	}
+	
+	
+	public Node(String op, Node left, Node right) {
+		str = op;
+		type = types.OPERATOR;
+		this.left = left;
+		this.right = right;
+	}
+	
+	public types getType() {
+		types s = type;
+		return s;
+	}
+	
+	public Node getRight() {
+		return this.right;
+	}
+	public Node getLeft() {
+		return this.left;
+	}
+	public String getVariable() {
+		return str;
+	}
+	public Double getNumber() {
+		return number;
+	}
+	
+	public boolean isInteger(String tokens){
+		if (tokens.matches("[0.0-9.0]+")) {
+			return true;
+		}
+		else {
+			return false;
+		}
+
+
+	}
+
+	public boolean isVariable (String s) {
+		char c = s.charAt(0);
+		if (c >= 'A' && c <= 'Z' || c >= 'a' && c<= 'z'){
+			return true;
+		}
+		else { return false;}
+	}
+
+	public int getPrecedence(String a){
+		if (a.equals("+")){
+			return 1;
+		}
+		if (a.equals("-")){
+			return 1;
+		}
+		if (a.equals("(")){
+			return 0;
+		}
+		if (a.equals(")")){
+			return 0;
+		}
+		if (a.equals("*")){
+			return 2;
+		}
+		if (a.equals("/")){
+			return 2;
+		}
+		if (a.equals("^")){
+			return 3;
+		}
+		if (isInteger(a)){
+			return 4;
+		}
+		if (isVariable(a)){
+			return 4;
+		}
+		else {
+			return 0;
+		}
+	}
+	
+	public String printPostfixExpression() {
+		if (getType() == types.NUMBER){
+			double d = getNumber();
+			String s = " " + Double.toString(d) + " ";
+			return s;
+		}
+		else if (getType() == types.VARIABLE){
+			String s = " " + getVariable() + " ";
+			return s;
+		}
+		else {
+			return left.printPostfixExpression() + right.printPostfixExpression() + str;
+			}
+		}
+	
+	public String printInfixExpression() {
+		String string = "";
+		if (getType() == types.NUMBER){
+			double d = getNumber();
+			String s = " " + Double.toString(d) + " ";
+			string = string + s;
+		}
+		else if (getType() == types.VARIABLE){
+			String s = " " + getVariable() + " ";
+			string = string + s;
+		}
+		else {
+			String a = getVariable();
+			int current = getPrecedence(a);
+			int lefty;
+			int righty;
+			if (left.getType() == types.NUMBER || left.getType() == types.VARIABLE){
+				lefty = 4;
+			}
+			else {
+				String b = left.getVariable();
+				lefty = getPrecedence(b);
+			}
+			if (right.getType() == types.NUMBER || right.getType() == types.VARIABLE){
+				righty = 4;
+			}
+			else {
+				String c = right.getVariable();
+				righty = getPrecedence(c);
+			}
+			if (current <= lefty) {
+				string = string + left.printInfixExpression();
+			}
+			else {
+				string = string + "(" + left.printInfixExpression() + ")";
+			}
+			string = string + getVariable();
+			if (current < righty){
+				string = string + right.printInfixExpression();
+			}
+			if (current > righty){
+				string = string + "(" + right.printInfixExpression() + ")";
+			}
+			if (current == righty){
+				if (getVariable().equals("/") || getVariable().equals("-")) {
+					string = string + "(" + right.printInfixExpression() + ")";
+				}
+				else {
+					string = string + right.printInfixExpression();
+				}
+			}
+			
+			
+			
+			
+		}
+		return string;
+		
+	}
+	public Node derivative() {
+		if (getType() == types.VARIABLE && getVariable().equals("X") || getType() == types.VARIABLE && getVariable().equals("x")) {
+			Node n = new Node(1);
+			return n;
+		}
+		if (getType() == types.NUMBER || getType() == types.VARIABLE) {
+			Node n = new Node(0);
+			return n;
+		}
+		else {
+			if (getVariable().equals("+")) {
+				Node n = new Node("+", left.derivative(), right.derivative());
+				return n;
+			}
+			if (getVariable().equals("-")) {
+				Node n = new Node("-", left.derivative(), right.derivative());
+				return n;
+			}
+			if (getVariable().equals("*")) {
+				Node one = new Node("*", getLeft(), right.derivative());
+				Node two = new Node("*", getRight(), left.derivative());
+				Node n = new Node("+", one, two);
+				return n;
+			}
+			if (getVariable().equals("/")) {
+				Node one = new Node("*", getLeft(), right.derivative());
+				Node two = new Node("*", getRight(), left.derivative());
+				Node three = new Node("-", one, two);
+				Node four = new Node("*", getRight(), getRight());
+				Node n = new Node("/", three, four);
+				return n;
+			}
+			else {
+				Node one = new Node(right.getNumber());
+				double number = right.getNumber() - 1;
+				Node two = new Node(number);
+				Node three = new Node("^", getLeft(), two);
+				Node four = new Node("*", one, three);
+				Node n = new Node("*", four, left.derivative());
+				return n;
+			}
+		}
+		
+	}
+	public Node simplify() {
+		if (getType() == types.VARIABLE || getType() == types.NUMBER) {
+			return this;
+		}
+		else {
+			if (getVariable().equals("+")) {
+				if (left.getType() == types.NUMBER && left.getNumber() == 0) {
+					return right.simplify();
+				}
+				if (right.getType() == types.NUMBER && right.getNumber() == 0) {
+					return left.simplify();
+				}
+				if (left.getType() == types.NUMBER && right.getType() == types.NUMBER) {
+					Node n = new Node("+", left, right);
+					return n;
+				}
+				else {
+					Node n = new Node("+", left.simplify(), right.simplify());
+					return n;
+				}
+			}
+			if (getVariable().equals("-")) {
+				if (right.getType() == types.NUMBER && right.getNumber() == 0) {
+					return left.simplify();
+				}
+				if (left.getType() == types.NUMBER && right.getType() == types.NUMBER) {
+					Node n = new Node("-", left, right);
+					return n;
+				}
+				else {
+					Node n = new Node("-", left.simplify(), right.simplify());
+					return n;
+				}
+			}
+			if (getVariable().equals("*")) {
+				if (left.getType() == types.NUMBER && left.getNumber() == 0 || right.getType() == types.NUMBER && right.getNumber() == 0) {
+					Node n = new Node(0);
+					return n;
+					}
+				if (right.getType() == types.NUMBER && right.getNumber() == 1) {
+					return left.simplify();
+				}
+				if (left.getType() == types.NUMBER && left.getNumber() == 1) {
+					return right.simplify();
+				}
+				if (left.getType() == types.NUMBER && right.getType() == types.NUMBER) {
+					Node n = new Node("*", getLeft(), getRight());
+					return n;
+				}
+				else {
+					Node n = new Node("*", left.simplify(), right.simplify());
+					return n;
+				}
+			}
+			if (getVariable().equals("/")) {
+				if (left.getType() == types.NUMBER && left.getNumber() == 0) {
+					Node n = new Node(0);
+					return n;
+				}
+				if (right.getType() == types.NUMBER && right.getNumber() == 1) {
+					return left.simplify();
+				}
+				if (left.getType() == types.NUMBER && right.getType() == types.NUMBER) {
+					Node n = new Node("/", getLeft(), getRight());
+					return n;
+				}
+				else {
+					Node n = new Node("/", left.simplify(), right.simplify());
+					return n;
+				}
+			}
+			else {
+				if (right.getType() == types.NUMBER && right.getNumber() == 1) {
+					return left.simplify();
+				}
+				if (right.getType() == types.NUMBER && right.getNumber() == 0) {
+					Node n = new Node(1);
+					return n;
+				}
+				if (left.getType() == types.NUMBER && left.getNumber() == 1) {
+					Node n = new Node(1);
+					return n;
+				}
+				if (left.getType() == types.NUMBER && right.getType() == types.NUMBER) {
+					Node n = new Node("^", getLeft(), getRight());
+					return n;
+				}
+				else {
+					Node n = new Node("^", left.simplify(), right.simplify());
+					return n;
+				}
+			}
+		}
+	}
+}
+	
+	
+
