@@ -1,0 +1,267 @@
+import java.awt.*;
+import java.lang.reflect.*;
+import java.util.List;
+import java.util.LinkedList;
+import javax.swing.*;
+import javax.swing.border.*;
+
+public class ShowAnyBinaryTree extends JFrame {
+	private static final long serialVersionUID = 1L;
+	private static final int OFFSET = 20;
+	private List<Line> lineList = new LinkedList<Line>();
+	
+	public static void showTree(Object root) {
+		new ShowAnyBinaryTree(root);
+	}
+	
+	public static void showTree(Object root, String title) {
+		new ShowAnyBinaryTree(root, title);
+	}
+	
+	private ShowAnyBinaryTree(Object root) {
+		super(root.getClass().getName());
+		
+		JPanel superPanel = new JPanel() {
+			private static final long serialVersionUID = 1L; // shut up a warning
+			public void paint(Graphics g) {
+				super.paint(g);
+				// Need to draw lines from a JPanel, not directly
+				// to JFrame, so we can get into the double buffer.
+				for(Line line: lineList) {
+					line.drawLine(g);
+				}
+			}
+		};
+
+		JPanel rootPanel = getPanel(root);
+		superPanel.add(rootPanel);
+
+		getContentPane().add(superPanel);
+
+		setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
+		pack();
+		setVisible(true);
+	}
+	
+	private ShowAnyBinaryTree(Object root, String title) {
+		this(root);
+		setTitle(title);
+	}
+
+	/* public void paint(Graphics g) {
+		super.paint(g);
+		for(Line line: lineList) {
+			line.drawLine(g);
+		}
+	}*/
+
+
+	private JPanel getPanel(Object node) {
+		if (node == null) {
+			JPanel temp = new JPanel();
+			//temp.setOpaque(false);
+			return temp;
+		}
+		Class<?> outerClass = node.getClass();
+		//System.out.println(outerClass.getName());
+		Field left=null, right=null;
+		
+		JPanel innerPanel = new JPanel(new GridLayout(0,1));
+		//innerPanel.setOpaque(false);
+		innerPanel.setBorder(new LineBorder(Color.BLACK, 1, true));
+		
+		//System.out.println("Name: " + outerClass.getName());
+		
+		Field[] fields = outerClass.getDeclaredFields();
+		for(Field field: fields) {
+			int modifiers = field.getModifiers();
+			if ((modifiers & Modifier.STATIC) != 0)
+				continue; // skip statics
+			try {
+			    field.setAccessible(true); // cheat !!
+			} catch (SecurityException e) {
+				System.out.println("Warning: unable to see class content.");
+			}
+			String name = field.getName();
+			if (field.getType().getName().equals(outerClass.getName()) && name.equals("left")) { // Class doesn't do .equals
+				try {
+					if (field.get(node)!=null)
+						left = field;
+				} catch (IllegalArgumentException e) {
+					left = null;
+				} catch (IllegalAccessException e) {
+					left = null;
+				} catch (NullPointerException e) {
+					left = null;
+				}
+			}
+			else if (field.getType().getName().equals(outerClass.getName()) && name.equals("right")) {
+				try {
+					if (field.get(node)!=null)
+						right = field;
+				} catch (IllegalArgumentException e) {
+					right = null;
+				} catch (IllegalAccessException e) {
+					right = null;
+				} catch (NullPointerException e) {
+					right = null;
+				}
+			} else {
+				String value;
+				try {
+					value = field.get(node).toString();
+				} catch (IllegalAccessException e) {
+					value = "NA";
+				} catch (NullPointerException e) {
+					value = "null";
+				}
+			 // innerPanel.add(new JLabel(type + " " + name + " = " + value)); // with type
+				innerPanel.add(new JLabel(             name + " = " + value)); // without type
+			}
+		}
+		if (left==null && right==null)
+			return innerPanel;
+		else {
+			JPanel outerPanel = new JPanel(new GridBagLayout()) /*{
+				public void paintComponent(Graphics g) {
+					super.paintComponent(g);
+					
+					// draw connecting lines
+					GridBagLayout layout = (GridBagLayout)this.getLayout();
+					int[][]dimensions = layout.getLayoutDimensions();
+					int rootLeftx = dimensions[0][0];
+					int rootLefty = dimensions[1][0];
+
+					int rootRightx = dimensions[0][0] + dimensions[0][1];
+					int rootRighty = dimensions[1][0];
+					
+					int leftx = dimensions[0][0]/2;
+					int lefty = dimensions[1][0] + OFFSET;
+					
+					int rightx = dimensions[0][0] + dimensions[0][1]+dimensions[0][2]/2;
+					int righty = dimensions[1][0] + OFFSET;
+					
+					g.drawLine(rootLeftx,  rootLefty,  leftx, lefty);
+					g.drawLine(rootRightx, rootRighty, rightx, righty);
+				}
+			}*/;
+			//LineBorder border = new LineBorder(Color.BLACK, 2);
+			//outerPanel.setBorder(border);
+			//outerPanel.setOpaque(false);
+			GridBagConstraints constraints = new GridBagConstraints();
+			//constraints.fill=GridBagConstraints.BOTH;
+			constraints.fill=GridBagConstraints.HORIZONTAL;
+			constraints.anchor=GridBagConstraints.NORTH;
+			constraints.gridx=1;
+			constraints.gridy=0;
+			constraints.insets = new Insets(OFFSET,0,0,0);
+			//constraints.weightx=1;
+			//constraints.weighty=0;
+			outerPanel.add(innerPanel, constraints); // current node
+			Object lobj = null;
+			try {
+				lobj = left.get(node);
+			} catch (IllegalArgumentException e) {
+				e.printStackTrace();
+			} catch (IllegalAccessException e) {
+				e.printStackTrace();
+			} catch (NullPointerException e) {
+				lobj = null; // OK, this is normal
+			}
+			constraints.gridx=0;
+			constraints.gridy=1;
+			//constraints.insets = new Insets(0,0,0,0);
+			//constraints.weightx=0;
+			//constraints.weighty=1;
+			JPanel lobjPanel = getPanel(lobj);
+			outerPanel.add(lobjPanel, constraints); // left subtree in lower left
+			Object robj = null;
+			try {
+				robj = right.get(node);
+			} catch (IllegalArgumentException e) {
+				e.printStackTrace();
+			} catch (IllegalAccessException e) {
+				e.printStackTrace();
+			} catch (NullPointerException e) {
+				robj = null; // OK, this is normal
+			}
+			constraints.gridx=2;
+			JPanel robjPanel = getPanel(robj);
+			outerPanel.add(robjPanel, constraints); // right subtree in lower right
+			
+			lineList.add(new Line(innerPanel, lobjPanel, robjPanel));
+			
+			return outerPanel;
+		}
+	}
+
+/*
+	public static void main(String[] args) {
+		ShowTreeTestNode left1 = new ShowTreeTestNode(8);
+		ShowTreeTestNode right1 = new ShowTreeTestNode(9);
+		ShowTreeTestNode node1 = new ShowTreeTestNode("*" ,left1, right1);
+		
+		ShowTreeTestNode left2 = new ShowTreeTestNode(12);
+		ShowTreeTestNode root = new ShowTreeTestNode("^", left2, node1);
+		
+		showTree(root);
+	}
+*/
+}
+
+//internal use only
+class Line {
+	private Component start, left, right; // ordered, from first to second
+	public Line(JPanel cs, JPanel cl, JPanel cr) {
+		start = cs;
+		left = cl;
+		LayoutManager clLayout = cl.getLayout();
+		if (clLayout instanceof GridBagLayout) { // kind of a hack
+			//GridBagLayout gb = (GridBagLayout)clLayout;
+			Component[] comp = (cl.getComponents());
+			left = comp[0]; // dangerous, not really sure it's the first
+		}
+		right = cr;
+		LayoutManager crLayout = cr.getLayout();
+		if (crLayout instanceof GridBagLayout) {
+			//GridBagLayout gb = (GridBagLayout)crLayout;
+			Component[] comp = (cr.getComponents());
+			right = comp[0]; // dangerous, not really sure it's the first
+		}
+	}
+
+	private Point getOffset(Container c) {
+		int x = 0, y = 0;
+		do {
+			x += c.getX();
+			y += c.getY();
+			c = c.getParent();
+		} while (c.getParent().getParent()!=null); // don't count final parents, they're the screen offset and frame offset
+		return new Point(x, y);
+	}
+
+	public void drawLine(Graphics g) {
+		Point startOffset = getOffset(start.getParent());
+		int startX = start.getX()+(int)startOffset.x;
+		int startY = start.getY()+(int)startOffset.y;
+
+		// left line
+		if (left != null) {
+			Point leftOffset = getOffset(left.getParent());
+			int startx = startX;
+			int starty = startY + start.getHeight();
+			int leftx = left.getX()+left.getWidth()/2+leftOffset.x;
+			int lefty = left.getY()+leftOffset.y;
+			g.drawLine(startx, starty, leftx, lefty);
+		}
+
+		// right line
+		if (right != null) {
+			Point rightOffset = getOffset(right.getParent());
+			int startx = startX+start.getWidth();
+			int starty = startY+start.getHeight();
+			int rightx = right.getX()+right.getWidth()/2 + rightOffset.x;
+			int righty = right.getY() + rightOffset.y;
+			g.drawLine(startx, starty, rightx, righty);
+		}
+	}
