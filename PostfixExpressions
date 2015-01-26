@@ -1,0 +1,203 @@
+import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.util.Stack;
+import java.util.StringTokenizer;
+
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+
+
+public class PostfixExpressions <T> implements ActionListener {
+
+
+	private static final int INITIAL_CAPACITY = 20;
+	private int top;
+	private int finalvalue;
+
+
+	private Stack <String> operatorStack = new Stack<String>();
+	private Stack <Node> valueStack = new Stack<Node>();
+
+
+
+
+	private JTextField textField = new JTextField();
+	private JLabel labeltwo = new JLabel("Infix");
+	private JLabel labelone = new JLabel("Expression:");
+	private JLabel labelthree = new JLabel("Postfix");
+	private JLabel labelfour = new JLabel("Derivative");
+	private JLabel infixresult = new JLabel();
+	private JLabel postfixresult = new JLabel();
+	private JLabel dresult = new JLabel();
+
+
+	public PostfixExpressions() {
+		JFrame frame = new JFrame("Counter Demo");
+		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+		frame.setLayout(new GridLayout(4,4));
+		frame.add(labelone);
+		frame.add(textField);
+		frame.add(labeltwo);
+		frame.add(infixresult);
+		frame.add(labelthree);
+		frame.add(postfixresult);
+		frame.add(labelfour);
+		frame.add(dresult);
+
+		textField.addActionListener(this);
+
+		frame.pack();
+		frame.setLocation(20,50); // pixels, relative to upper left of screen
+		frame.setVisible(true);
+	}
+
+
+
+	public static void main(String[] args){
+
+		PostfixExpressions <String> collector  = new PostfixExpressions<String>();
+
+	}
+
+	public int getPrecedence(String a){
+		if (a.equals("+")){
+			return 1;
+		}
+		if (a.equals("-")){
+			return 1;
+		}
+		if (a.equals("(")){
+			return 0;
+		}
+		if (a.equals(")")){
+			return 0;
+		}
+		if (a.equals("*")){
+			return 2;
+		}
+		if (a.equals("/")){
+			return 2;
+		}
+		if (a.equals("^")){
+			return 3;
+		}
+		if (isInteger(a) || isVariable(a)){
+			return 4;
+		}
+		else {
+			return 0;
+		}
+	}
+
+	public boolean isInteger(String tokens){
+		if (tokens.matches("[0.0-9.0]+")) {
+			return true;
+		}
+		else {
+			return false;
+		}
+
+
+	}
+
+
+	
+	
+	public boolean isVariable (String s) {
+		char c = s.charAt(0);
+		if (c >= 'A' && c <= 'Z' || c >= 'a' && c<= 'z'){
+			return true;
+		}
+		else { return false;}
+	}
+
+	
+
+	public void actionPerformed(ActionEvent event) {
+
+		//see if they typed anything in
+		try {String text = textField.getText();
+		}
+		catch (NullPointerException exception)
+		{
+			System.out.println ("The text box is empty.");
+		}
+
+		//add parenthesis
+		String w = "(" + textField.getText() + ")";
+
+		w = w.replaceAll(" ", "");
+
+		StringTokenizer tokenizer = new StringTokenizer(w, "+-*/^()", true);
+		while (tokenizer.hasMoreTokens()){
+			String token = tokenizer.nextToken();
+			if (isInteger(token) || isVariable(token)) {
+				if (isInteger(token)) {
+					double value = Double.parseDouble(token);
+					Node newnode = new Node(value);
+					valueStack.push(newnode);
+				}
+				else {
+					Node newnode2 = new Node(token);
+					valueStack.push(newnode2);
+				}
+
+			}
+
+			else if (token.equals("(")) {
+				operatorStack.push(token);
+
+			}
+
+			else if (token.equals(")")){
+				while (! operatorStack.peek().equals("(")){
+					Node a = valueStack.pop();
+					Node b = valueStack.pop();
+					String c = operatorStack.pop();
+					Node result = new Node(c, b, a);
+					valueStack.push(result);
+				}
+				operatorStack.pop();
+			}
+
+			else {
+				while (operatorStack.isEmpty() == false && getPrecedence(operatorStack.peek()) >= getPrecedence(token)){    
+					String z = operatorStack.pop();
+					Node l = valueStack.pop();
+					Node m = valueStack.pop();
+					Node answer = new Node(z, m, l);
+					valueStack.push(answer);
+				}
+				operatorStack.push(token);
+			}
+		}
+		Node finalvalue = valueStack.peek();
+		ShowAnyBinaryTree.showTree(finalvalue);
+		String finalpostfix = finalvalue.printPostfixExpression();
+		postfixresult.setText(" " + finalpostfix + " ");
+		String finalinfix = finalvalue.printInfixExpression();
+		infixresult.setText(" " + finalinfix + " ");
+		Node finald = finalvalue.derivative();
+		Node simpler = finald.simplify();
+		ShowAnyBinaryTree.showTree(finald);
+		Node simplerer = simpler.simplify();
+		String s = simplerer.printInfixExpression();
+		dresult.setText(" " + s + " ");
+		
+		
+		
+	
+	}
+	
+	
+
+}
+
+
+
+
+
